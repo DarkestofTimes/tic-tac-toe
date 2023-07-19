@@ -1,0 +1,45 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.grid {
+  margin: auto;
+  width: 500px;
+  height: 500px;
+  display: grid;
+  border: 2px solid black;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  place-items: center;
+}
+
+.cellStyle {
+  height: 100px;
+  width: 100px;
+  background-color: aqua;
+  display: grid;
+  place-content: center;
+  font-size: 2rem;
+}
+
+.popUpContainer {
+  width: 100%;
+  height: 100vh;
+}
+.popUpTable {
+  width: 320px;
+  height: 250px;
+  margin: auto;
+  display: flex;
+}
+
+.popUpButton {
+  width: 150px;
+  height: 100px;
+}
+
+.nonSelectable {
+  pointer-events: none;
+}
