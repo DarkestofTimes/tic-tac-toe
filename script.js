@@ -38,6 +38,10 @@ const gameModule = (function () {
 
   let winner = null;
 
+  let gameOver = false;
+
+  let winningCon = [];
+
   return {
     markCell,
     getGrid,
@@ -47,6 +51,8 @@ const gameModule = (function () {
     currentPlayer,
     listeners,
     winner,
+    gameOver,
+    winningCon,
   };
 })();
 
@@ -57,10 +63,18 @@ function gameMaster() {
   const players = gameModule.players;
 
   const switchTurn = () => {
-    if (!result.gameOver) {
-      gameModule.currentPlayer =
-        gameModule.currentPlayer === players[0] ? players[1] : players[0];
-      computerPlayer();
+    setTimeout(() => {
+      if (!grid.gameOver) {
+        gameModule.currentPlayer =
+          gameModule.currentPlayer === players[0] ? players[1] : players[0];
+        computerPlayer();
+      }
+    }, 200);
+  };
+
+  const checkTurn = () => {
+    if (players[0].token === "O") {
+      switchTurn();
     }
   };
 
@@ -69,20 +83,24 @@ function gameMaster() {
       grid.resetGrid();
       display.updateDisplay();
       gameModule.currentPlayer = players[0];
-      result.gameOver = false;
-    }, 1000);
+      grid.gameOver = false;
+      checkTurn();
+      document.querySelector(".gameOverScreen").style.display = "none";
+    }, 1300);
   };
 
   const playRound = (ev) => {
     if (grid.getGrid()[ev] === "") {
       grid.markCell(ev, gameModule.currentPlayer.token);
       result.getResult();
-      const gameOver = result.gameOver;
+      display.updateDisplay();
+      const gameOver = grid.gameOver;
       if (gameOver && result.getResult() !== null) {
-        console.log(`${result.getResult()}'s have it!`);
+        display.highlight(grid.winningCon);
+        display.gameOverDisplay(`${result.getResult()}'s have it!`);
         gameReset();
       } else if (gameOver && result.getResult() === null) {
-        console.log("That would be a tie");
+        display.gameOverDisplay("That would be a tie");
         gameReset();
       }
       switchTurn();
@@ -93,6 +111,7 @@ function gameMaster() {
     playRound,
     getGrid: grid.getGrid,
     setPlayer: grid.setPlayer,
+    checkTurn,
   };
 }
 
@@ -109,7 +128,6 @@ function resultMaster() {
     [2, 4, 6],
   ];
 
-  let gameOver = false;
   let winner = null;
 
   const getResult = () => {
@@ -117,11 +135,13 @@ function resultMaster() {
       let [a, b, c] = con.map((index) => grid.getGrid()[index]);
 
       if (a !== "" && a === b && b === c) {
-        gameOver = true;
+        grid.gameOver = true;
         winner = a;
+        grid.winningCon = con;
+
         return winner;
       } else if (grid.getGrid().filter((cell) => cell === "").length === 0) {
-        gameOver = true;
+        grid.gameOver = true;
         winner = null;
         return winner;
       }
@@ -132,7 +152,9 @@ function resultMaster() {
 
   const getGameOver = () => gameOver;
 
-  return { getResult, getGameOver, getWinner };
+  const getWinCon = () => winCon;
+
+  return { getResult, getGameOver, getWinner, getWinCon };
 }
 
 function displayMaster() {
@@ -143,7 +165,6 @@ function displayMaster() {
     if (ev.target.id) {
       ev.stopPropagation();
       game.playRound(Number(ev.target.id));
-      updateDisplay();
     } else {
       return;
     }
@@ -182,13 +203,34 @@ function displayMaster() {
     listeners.length = 0;
   };
 
-  updateDisplay();
+  const gameOverDisplay = (result) => {
+    const main = document.querySelector("main");
+    const gameOverScreen = `
+      <div class="gameOverScreen">
+        <div class="gameOverTable">
+        <h2 class="announceWinner"></h2>
+        </div>
+      </div>`;
+    setTimeout(() => {
+      main.insertAdjacentHTML("afterend", gameOverScreen);
+      document.querySelector(".announceWinner").textContent = result;
+    }, 500);
+  };
 
-  return { updateDisplay, disableEventListeners };
+  const highlight = (a) => {
+    a.forEach((b) => {
+      const cell = document.getElementById(b);
+      cell.classList.add("highlightRED");
+      console.log(cell);
+    });
+  };
+
+  return { updateDisplay, disableEventListeners, gameOverDisplay, highlight };
 }
 
 function assignPlayers() {
-  const game = gameModule;
+  const grid = gameModule;
+  const game = gameMaster();
   const main = document.querySelector("main");
   const popUp = `
       <div class="popUpContainer">
@@ -206,24 +248,33 @@ function assignPlayers() {
       ev.stopPropagation();
       ev.preventDefault();
       const elementId = ev.target.id;
-      game.setPlayer(elementId);
+      grid.setPlayer(elementId);
+      game.checkTurn();
+      document.querySelector(".popUpContainer").style.display = "none";
     });
   });
 }
-
-let bestScore;
 
 function computerPlayer() {
   const grid = gameModule.getGrid();
   const players = gameModule.players;
   const currentPlayer = gameModule.currentPlayer;
   const game = gameMaster();
-  const display = displayMaster();
   const scores = {
     computer: 100,
     player: -100,
     tie: 0,
   };
+  const winCon = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
 
   const getResultCopy = (gridCopy) => {
     for (const con of winCon) {
@@ -245,17 +296,14 @@ function computerPlayer() {
     let bestMove;
     for (let index = 0; index < newGrid.length; index++) {
       if (newGrid[index] === "") {
-        newGrid[index] = players[1].token;
-        let { move, score } = minimax(grid, 0, true);
-        newGrid[index] = "";
+        let { moves, score } = minimax(grid, 0, true);
         if (score > bestScore) {
           bestScore = score;
-          bestMove = move.sort((a, b) => b.score - a.score)[0].index;
+          bestMove = moves.sort((a, b) => b.score - a.score)[0].index;
         }
       }
     }
     game.playRound(bestMove);
-    display.updateDisplay();
   }
 
   function minimax(grid, depth, isMaximizing) {
@@ -266,6 +314,7 @@ function computerPlayer() {
       return { score: scores.tie };
     } else if (result === scores.player) {
       return { score: scores.player };
+    } else if (result === null) {
     }
 
     if (isMaximizing) {
@@ -274,37 +323,38 @@ function computerPlayer() {
       for (let index = 0; index < grid.length; index++) {
         if (grid[index] === "") {
           grid[index] = players[1].token;
-          let { move, score } = minimax(grid, depth + 1, false);
+          let { moves, score } = minimax(grid, depth + 1, false);
           grid[index] = "";
-          if (score >= bestScore) {
+          if (score > bestScore) {
             bestScore = score;
             bestMove.push({ index, score });
           }
         }
       }
-
-      return { move: bestMove, score: bestScore };
+      return { moves: bestMove, score: bestScore };
     } else {
       let bestScore = Infinity;
       let bestMove = [];
       for (let index = 0; index < grid.length; index++) {
         if (grid[index] === "") {
           grid[index] = players[0].token;
-          let { move, score } = minimax(grid, depth + 1, true);
+          let { moves, score } = minimax(grid, depth + 1, true);
           grid[index] = "";
-          if (score <= bestScore) {
+          if (score < bestScore) {
             bestScore = score;
             bestMove.push({ index, score });
           }
         }
       }
-      return { move: bestMove, score: bestScore };
+
+      return { moves: bestMove, score: bestScore };
     }
   }
 }
 
 function initializeGame() {
-  displayMaster();
+  const display = displayMaster();
+  display.updateDisplay();
   assignPlayers();
 }
 
