@@ -42,6 +42,8 @@ const gameModule = (function () {
 
   let winningCon = [];
 
+  let clickBlocked = false;
+
   return {
     markCell,
     getGrid,
@@ -53,6 +55,7 @@ const gameModule = (function () {
     winner,
     gameOver,
     winningCon,
+    clickBlocked,
   };
 })();
 
@@ -63,13 +66,11 @@ function gameMaster() {
   const players = gameModule.players;
 
   const switchTurn = () => {
-    setTimeout(() => {
-      if (!grid.gameOver) {
-        gameModule.currentPlayer =
-          gameModule.currentPlayer === players[0] ? players[1] : players[0];
-        computerPlayer();
-      }
-    }, 200);
+    if (!grid.gameOver) {
+      gameModule.currentPlayer =
+        gameModule.currentPlayer === players[0] ? players[1] : players[0];
+      computerPlayer();
+    }
   };
 
   const checkTurn = () => {
@@ -84,8 +85,8 @@ function gameMaster() {
       display.updateDisplay();
       gameModule.currentPlayer = players[0];
       grid.gameOver = false;
+      document.querySelector(".gameOverScreen").remove();
       checkTurn();
-      document.querySelector(".gameOverScreen").style.display = "none";
     }, 1300);
   };
 
@@ -161,12 +162,18 @@ function displayMaster() {
   const grid = gameModule.getGrid();
 
   function clickHandler(ev) {
-    const game = gameMaster();
-    if (ev.target.id) {
-      ev.stopPropagation();
-      game.playRound(Number(ev.target.id));
-    } else {
-      return;
+    if (!gameModule.clickBlocked) {
+      const game = gameMaster();
+      if (ev.target.id) {
+        ev.stopPropagation();
+        game.playRound(Number(ev.target.id));
+        gameModule.clickBlocked = true;
+        setTimeout(() => {
+          gameModule.clickBlocked = false;
+        }, 300);
+      } else {
+        return;
+      }
     }
   }
 
@@ -221,7 +228,6 @@ function displayMaster() {
     a.forEach((b) => {
       const cell = document.getElementById(b);
       cell.classList.add("highlightRED");
-      console.log(cell);
     });
   };
 
@@ -261,8 +267,8 @@ function computerPlayer() {
   const currentPlayer = gameModule.currentPlayer;
   const game = gameMaster();
   const scores = {
-    computer: 100,
-    player: -100,
+    computer: 10,
+    player: -10,
     tie: 0,
   };
   const winCon = [
@@ -299,7 +305,7 @@ function computerPlayer() {
         let { moves, score } = minimax(grid, 0, true);
         if (score > bestScore) {
           bestScore = score;
-          bestMove = moves.sort((a, b) => b.score - a.score)[0].index;
+          bestMove = moves.index;
         }
       }
     }
@@ -319,6 +325,7 @@ function computerPlayer() {
 
     if (isMaximizing) {
       let bestScore = -Infinity;
+      let move = [];
       let bestMove = [];
       for (let index = 0; index < grid.length; index++) {
         if (grid[index] === "") {
@@ -327,13 +334,16 @@ function computerPlayer() {
           grid[index] = "";
           if (score > bestScore) {
             bestScore = score;
-            bestMove.push({ index, score });
+            score = Math.sign(score) * (Math.abs(score) - 1);
+            move.push({ index, score });
+            bestMove = move.sort((a, b) => b.score - a.score)[0];
           }
         }
       }
       return { moves: bestMove, score: bestScore };
     } else {
       let bestScore = Infinity;
+      let move = [];
       let bestMove = [];
       for (let index = 0; index < grid.length; index++) {
         if (grid[index] === "") {
@@ -342,7 +352,9 @@ function computerPlayer() {
           grid[index] = "";
           if (score < bestScore) {
             bestScore = score;
-            bestMove.push({ index, score });
+            score = Math.sign(score) * (Math.abs(score) - 1);
+            move.push({ index, score });
+            bestMove = move.sort((a, b) => b.score - a.score)[0];
           }
         }
       }

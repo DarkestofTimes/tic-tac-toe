@@ -51,6 +51,9 @@ body {
   background-color: aqua;
   color: var(--BUTTONS-C);
 }
+.cellStyle:active {
+  background-color: #941c2f;
+}
 
 .popUpContainer {
   position: absolute;
