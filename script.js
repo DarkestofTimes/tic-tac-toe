@@ -1,6 +1,5 @@
 const gameModule = (function () {
   const grid = [];
-  const listeners = [];
   const players = [
     {
       token: "",
@@ -51,7 +50,6 @@ const gameModule = (function () {
     setPlayer,
     players,
     currentPlayer,
-    listeners,
     winner,
     gameOver,
     winningCon,
@@ -179,7 +177,6 @@ function displayMaster() {
 
   const updateDisplay = () => {
     const board = document.querySelector(".grid");
-    const listeners = gameModule.listeners;
     board.textContent = "";
 
     grid.forEach((cell, index) => {
@@ -190,24 +187,22 @@ function displayMaster() {
       board.appendChild(cells);
     });
 
-    disableEventListeners(listeners);
-    addEventListeners(listeners);
+    disableEventListeners();
+    addEventListeners();
   };
 
-  const addEventListeners = (listeners) => {
+  const addEventListeners = () => {
     const cells = document.querySelectorAll(".cellStyle");
     cells.forEach((cell) => {
       cell.addEventListener("click", clickHandler);
-      listeners.push({ cell, clickHandler });
     });
   };
 
-  const disableEventListeners = (listeners) => {
-    // remains unsolved
-    listeners.forEach(({ cell, clickHandler }) => {
+  const disableEventListeners = () => {
+    const listeners = Array.from(document.querySelectorAll(".cellStyle"));
+    listeners.forEach((cell) => {
       cell.removeEventListener("click", clickHandler);
     });
-    listeners.length = 0;
   };
 
   const gameOverDisplay = (result) => {
